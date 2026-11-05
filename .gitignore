@@ -1,0 +1,11 @@
+# Secretos y configuración local
+.env
+.env.*
+!.env.example
+
+# Dependencias y compilaciones
+node_modules
+dist
+
+# Registros
+*.log
