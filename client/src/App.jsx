@@ -1,6 +1,9 @@
 import { useState } from "react";
 import "./App.css";
 
+const MIN_TITLE_LENGTH = 5;
+const MIN_DESCRIPTION_LENGTH = 10;
+
 const STATUS_LABELS = {
   new: "Nueva",
   in_progress: "En curso",
@@ -57,6 +60,12 @@ const dateFormatter = new Intl.DateTimeFormat("es-ES", {
   timeStyle: "short",
 });
 
+function createLocalId() {
+  // getRandomValues también funciona sin HTTPS, a diferencia de randomUUID.
+  const [value] = crypto.getRandomValues(new Uint32Array(1));
+  return `LOCAL-${value.toString(16).padStart(8, "0").toUpperCase()}`;
+}
+
 export default function App() {
   const [tickets, setTickets] = useState(INITIAL_TICKETS);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -64,6 +73,7 @@ export default function App() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedId, setSelectedId] = useState("DEMO-001");
   const [message, setMessage] = useState("");
+  const [formError, setFormError] = useState("");
 
   const query = search.trim().toLocaleLowerCase("es");
 
@@ -78,9 +88,13 @@ export default function App() {
     );
   });
 
-  const selectedTicket = filteredTickets.find(
-    (ticket) => ticket.id === selectedId
-  );
+  const selectedTicket = tickets.find((ticket) => ticket.id === selectedId);
+
+  const titleIsInvalid =
+    Boolean(formError) && form.title.trim().length < MIN_TITLE_LENGTH;
+  const descriptionIsInvalid =
+    Boolean(formError) &&
+    form.description.trim().length < MIN_DESCRIPTION_LENGTH;
 
   const openCount = tickets.filter(
     (ticket) => ticket.status !== "resolved"
@@ -94,6 +108,8 @@ export default function App() {
   function updateForm(event) {
     const { name, value } = event.target;
     setForm((previous) => ({ ...previous, [name]: value }));
+    setFormError("");
+    setMessage("");
   }
 
   function createTicket(event) {
@@ -102,15 +118,24 @@ export default function App() {
     const title = form.title.trim();
     const description = form.description.trim();
 
-    if (title.length < 5 || description.length < 10) {
-      setMessage(
-        "Escribe un título de al menos 5 caracteres y una descripción de al menos 10."
+    const invalidField =
+      title.length < MIN_TITLE_LENGTH
+        ? "title"
+        : description.length < MIN_DESCRIPTION_LENGTH
+          ? "description"
+          : null;
+
+    if (invalidField) {
+      setMessage("");
+      setFormError(
+        `Escribe un título de al menos ${MIN_TITLE_LENGTH} caracteres y una descripción de al menos ${MIN_DESCRIPTION_LENGTH}.`
       );
+      event.currentTarget.elements[invalidField].focus();
       return;
     }
 
     const ticket = {
-      id: `LOCAL-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
+      id: createLocalId(),
       title,
       description,
       category: form.category,
@@ -202,9 +227,11 @@ export default function App() {
                   name="title"
                   value={form.title}
                   onChange={updateForm}
-                  minLength={5}
+                  minLength={MIN_TITLE_LENGTH}
                   maxLength={120}
                   placeholder="Ej.: No puedo iniciar sesión"
+                  aria-invalid={titleIsInvalid}
+                  aria-describedby={titleIsInvalid ? "form-error" : undefined}
                   required
                 />
               </label>
@@ -215,10 +242,14 @@ export default function App() {
                   name="description"
                   value={form.description}
                   onChange={updateForm}
-                  minLength={10}
+                  minLength={MIN_DESCRIPTION_LENGTH}
                   maxLength={4000}
                   rows={5}
                   placeholder="¿Qué ocurre y qué pasos has probado?"
+                  aria-invalid={descriptionIsInvalid}
+                  aria-describedby={
+                    descriptionIsInvalid ? "form-error" : undefined
+                  }
                   required
                 />
               </label>
@@ -253,6 +284,12 @@ export default function App() {
                 </label>
               </div>
 
+              {formError && (
+                <p id="form-error" className="feedback-error" role="alert">
+                  {formError}
+                </p>
+              )}
+
               <button className="primary-button" type="submit">
                 Crear incidencia
               </button>
@@ -273,7 +310,10 @@ export default function App() {
                 <input
                   type="search"
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setMessage("");
+                  }}
                   placeholder="Título, identificador o categoría"
                 />
               </label>
@@ -282,7 +322,10 @@ export default function App() {
                 Estado
                 <select
                   value={statusFilter}
-                  onChange={(event) => setStatusFilter(event.target.value)}
+                  onChange={(event) => {
+                    setStatusFilter(event.target.value);
+                    setMessage("");
+                  }}
                 >
                   <option value="all">Todos</option>
                   {Object.entries(STATUS_LABELS).map(([value, label]) => (
@@ -302,7 +345,10 @@ export default function App() {
                     className={`ticket-item ${
                       selectedId === ticket.id ? "is-selected" : ""
                     }`}
-                    onClick={() => setSelectedId(ticket.id)}
+                    onClick={() => {
+                      setSelectedId(ticket.id);
+                      setMessage("");
+                    }}
                     aria-pressed={selectedId === ticket.id}
                     aria-controls="ticket-detail"
                   >

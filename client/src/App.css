@@ -63,6 +63,17 @@ h1 {
   color: #b5ecdb;
 }
 
+.feedback-error {
+  margin: 0;
+  padding: 14px 18px;
+  border: 1px solid #875039;
+  border-radius: 10px;
+  background: #43291f;
+  color: #fed7aa;
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+
 .metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -153,7 +164,7 @@ textarea {
   min-width: 0;
   min-height: 44px;
   padding: 11px 12px;
-  border: 1px solid #40536d;
+  border: 1px solid #5b7290;
   border-radius: 8px;
   background: #0b1524;
   color: #edf3fb;
@@ -198,7 +209,7 @@ textarea::placeholder {
   gap: 12px;
   max-height: 520px;
   margin: 0;
-  padding: 0 22px 22px;
+  padding: 8px 22px 22px;
   overflow-y: auto;
   list-style: none;
 }
