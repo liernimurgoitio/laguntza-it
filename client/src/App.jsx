@@ -446,7 +446,8 @@ export function PrototypeApp() {
 export default function App() {
   const params = new URLSearchParams(window.location.search);
   const mode = params.get('mode');
-  const demo = mode === 'demo-integrada' || window.location.pathname.startsWith('/demo/soporte/');
+  const demo = mode === 'demo-integrada' || window.location.pathname.startsWith('/demo/soporte/')
+    || document.querySelector('meta[name="laguntza-mode"]')?.content === 'demo-integrada';
   const integrated = mode === 'integrado' || window.location.pathname.startsWith('/soporte/');
   const deviceId = params.get('equipo') || '';
   const deviceName = params.get('nombre') || '';

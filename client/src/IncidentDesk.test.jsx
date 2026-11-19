@@ -6,9 +6,19 @@ import IncidentDesk from './IncidentDesk';
 import { createDemoIncidentApi } from './demoIncidentApi';
 import { createIncidentApi } from './incidentApi';
 
-afterEach(() => { window.history.replaceState(null, '', '/'); });
+afterEach(() => { window.history.replaceState(null, '', '/'); document.querySelector('meta[name="laguntza-mode"]')?.remove(); });
 
 describe('integración de Laguntza IT', () => {
+  it('la entrega estática permanece en modo demo aunque cambie su carpeta', async () => {
+    const fetcher = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('No debería usarse'));
+    const meta = document.createElement('meta'); meta.name = 'laguntza-mode'; meta.content = 'demo-integrada'; document.head.append(meta);
+    window.history.replaceState(null, '', '/soporte/');
+    render(<App />);
+    await screen.findByRole('combobox', { name: 'Nuevo estado' });
+    expect(screen.getByText('Demo · datos ficticios')).toBeInTheDocument();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it('abre desde un aparato de la demo sin realizar solicitudes de red', async () => {
     const fetcher = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('No debería usarse'));
     window.history.replaceState(null, '', '/demo/soporte/?equipo=impresora&nombre=Impresora%20de%20pruebas');
