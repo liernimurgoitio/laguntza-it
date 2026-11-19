@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import "./App.css";
+import IncidentDesk from "./IncidentDesk";
+import { createIncidentApi } from "./incidentApi";
+import { createDemoIncidentApi } from "./demoIncidentApi";
 
 const MIN_TITLE_LENGTH = 5;
 const MIN_DESCRIPTION_LENGTH = 10;
@@ -66,7 +69,7 @@ function createLocalId() {
   return `LOCAL-${value.toString(16).padStart(8, "0").toUpperCase()}`;
 }
 
-export default function App() {
+export function PrototypeApp() {
   const [tickets, setTickets] = useState(INITIAL_TICKETS);
   const [form, setForm] = useState(EMPTY_FORM);
   const [search, setSearch] = useState("");
@@ -438,4 +441,16 @@ export default function App() {
       </footer>
     </div>
   );
+}
+
+export default function App() {
+  const params = new URLSearchParams(window.location.search);
+  const mode = params.get('mode');
+  const demo = mode === 'demo-integrada' || window.location.pathname.startsWith('/demo/soporte/');
+  const integrated = mode === 'integrado' || window.location.pathname.startsWith('/soporte/');
+  const deviceId = params.get('equipo') || '';
+  const deviceName = params.get('nombre') || '';
+  const deviceState = params.get('estado') || '';
+  const client = useMemo(() => demo ? createDemoIncidentApi({ deviceId, deviceName, deviceState }) : createIncidentApi(), [demo, deviceId, deviceName, deviceState]);
+  return demo || integrated ? <IncidentDesk client={client} initialDevice={deviceId} /> : <PrototypeApp />;
 }
