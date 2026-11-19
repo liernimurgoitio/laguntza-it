@@ -34,6 +34,7 @@ export function createIncidentApi(fetcher = globalThis.fetch) {
     },
     list(params = {}) { return request('?' + new URLSearchParams(params)); },
     detail(id) { return request('/' + encodeURIComponent(id)); },
+    importZaintza(data) { return request('/importar-zaintza', { method: 'POST', body: JSON.stringify(data) }); },
     create(data) { return request('', { method: 'POST', body: JSON.stringify(data) }); },
     update(id, data) { return request('/' + encodeURIComponent(id), { method: 'POST', body: JSON.stringify(data) }); },
   };

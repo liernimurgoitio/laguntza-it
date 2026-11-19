@@ -16,6 +16,14 @@ Gestión de incidencias de soporte IT con una interfaz React e integración con 
 
 La URL corresponde a la entrega estática de la demo. La publicación en el alojamiento se realiza por separado de un push a GitHub.
 
+## Intercambio ficticio con Zaintza SOC
+
+He añadido **Importar prueba de Zaintza**: lectura local de un JSON de hasta 16 KiB, validación del formato, revisión visible y confirmación antes de preparar el formulario. Leer el archivo no crea una incidencia. El formulario permite editar título, descripción y prioridad; no asocia automáticamente un aparato.
+
+El servidor vuelve a validar el documento y conserva su referencia en SQLite. Reimportar la misma detección abre la incidencia existente sin sobrescribir su seguimiento, incluso después de reiniciar o recuperar una copia. Una referencia con evidencias distintas devuelve un conflicto. El cierre en Laguntza no cambia la investigación de Zaintza.
+
+La primera versión solo admite archivos ficticios v1 y rechaza campos adicionales, datos marcados como reales y versiones desconocidas. La demo ofrece **Descargar ejemplo ficticio** para practicar sin Zaintza instalado. La publicación de esta nueva entrega y su activación privada siguen siendo pasos separados.
+
 ## Modos de uso
 
 | Modo | Cómo abrirlo | Dónde guarda los cambios |
@@ -67,7 +75,7 @@ El backend y sus pruebas se mantienen en Red bajo vigilancia. La guía de integr
 
 He comprobado la interfaz con Vitest y Testing Library, y el servidor con pruebas de SQLite y HTTP en Red bajo vigilancia. He conservado el prototipo original y sus pruebas. Las comprobaciones con datos ficticios no acreditan una implantación empresarial.
 
-La versión privada utiliza una identidad compartida y no incorpora roles, SLA, asignación de técnicos ni notificaciones. El registro de seguimiento es persistente, pero no es una auditoría inviolable. No se generan incidencias por cada desconexión. La incorporación de detecciones de Zaintza SOC queda para una fase posterior.
+La versión privada utiliza una identidad compartida y no incorpora roles, SLA, asignación de técnicos ni notificaciones. El registro de seguimiento es persistente, pero no es una auditoría inviolable. No se generan incidencias por cada desconexión. El intercambio de detecciones reales de Zaintza SOC sigue pendiente; esta entrega solo incorpora un recorrido con datos ficticios.
 
 ## Autoría
 

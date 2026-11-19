@@ -1,4 +1,5 @@
 import { ApiError } from './incidentApi';
+import { validateExchange } from './zaintzaExchange';
 
 const copy = value => structuredClone(value);
 const normalize = value => String(value).normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
@@ -44,6 +45,19 @@ export function createDemoIncidentApi({ deviceId = '', deviceName = '', deviceSt
           high: tickets.filter(ticket => ticket.status !== 'resolved' && ticket.priority === 'high').length } });
     },
     async detail(id) { return copy(find(id)); },
+    async importZaintza(data) {
+      if (data.confirmDemo !== true || data.deviceId || data.category !== 'Acceso y cuentas') throw new ApiError('Revisa y confirma la prueba ficticia, sin aparato asociado.', 400);
+      const source = validateExchange(data.source);
+      const previous = tickets.find(ticket => ticket.context.source?.detection.id === source.detection.id && ticket.context.source.sourceInstanceId === source.sourceInstanceId);
+      if (previous) {
+        if (JSON.stringify(previous.context.source) !== JSON.stringify(source)) throw new ApiError('La referencia ya existe con otras evidencias.', 409);
+        return { ...copy(previous), importReused: true };
+      }
+      const result = await this.create(data);
+      const ticket = find(result.id); ticket.context.source = copy(source);
+      ticket.activity.unshift({ id: ++activitySequence, date: ticket.createdAt, type: 'source', detail: 'Importación manual de prueba ficticia: ' + source.detection.id, actor: 'demo' });
+      return { ...copy(ticket), importReused: false };
+    },
     async create(data) {
       const payload = JSON.stringify(data);
       if (requests.has(data.requestId)) {

@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { requestId } from './incidentApi';
 import './IncidentDesk.css';
+import ZaintzaImport from './ZaintzaImport';
+import { exchangeDraft } from './zaintzaExchange';
 
 const STATUS = { new: 'Nueva', in_progress: 'En curso', waiting: 'Pendiente del usuario', resolved: 'Resuelta' };
 const PRIORITY = { low: 'Baja', medium: 'Media', high: 'Alta' };
 const CATEGORIES = ['Acceso y cuentas', 'Aplicaciones', 'Equipos', 'Red y conexión', 'Otros'];
-const ACTIVITY = { created: 'Creación', status: 'Estado', priority: 'Prioridad', note: 'Nota', resolution: 'Resolución', reopened: 'Reapertura' };
+const ACTIVITY = { created: 'Creación', status: 'Estado', priority: 'Prioridad', note: 'Nota', resolution: 'Resolución', reopened: 'Reapertura', source: 'Origen de la prueba' };
 const dates = new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'medium' });
 const emptyForm = { title: '', description: '', category: 'Red y conexión', priority: 'medium', deviceId: '' };
 const emptyUpdate = { status: 'new', priority: 'medium', resolution: '', note: '' };
@@ -18,6 +20,7 @@ export default function IncidentDesk({ client, initialDevice = '' }) {
   const [selectedId, setSelectedId] = useState('');
   const [ticket, setTicket] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [importSource, setImportSource] = useState(null);
   const [update, setUpdate] = useState(emptyUpdate);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -81,12 +84,14 @@ export default function IncidentDesk({ client, initialDevice = '' }) {
   async function create(event) {
     event.preventDefault(); setSaving(true); setError(''); setMessage('');
     try {
-      const result = await client.create({ ...form, requestId: intent.current });
+      const data = { ...form, requestId: intent.current };
+      const result = importSource ? await client.importZaintza({ ...data, source: importSource, confirmDemo: true }) : await client.create(data);
       intent.current = requestId();
       setForm(previous => ({ ...emptyForm, deviceId: previous.deviceId }));
-      setFilters({ q: '', status: 'all', priority: 'all', page: 1 });
+      setFilters({ q: result.importReused ? result.id : '', status: 'all', priority: 'all', page: 1 });
+      setImportSource(null);
       setSelectedId(result.id); setTicket(result);
-      setMessage('Incidencia ' + result.id + ' creada y guardada' + (client.demo ? ' solo en esta demo.' : ' en el servidor.'));
+      setMessage(result.importReused ? 'La prueba ya está registrada en ' + result.id + '. Se ha abierto su incidencia sin modificarla.' : 'Incidencia ' + result.id + ' creada y guardada' + (client.demo ? ' solo en esta demo.' : ' en el servidor.'));
       setRevision(value => value + 1);
     } catch (problem) { setError(problem.message); }
     finally { setSaving(false); }
@@ -111,13 +116,15 @@ export default function IncidentDesk({ client, initialDevice = '' }) {
       {error && <p className="feedback-error" role="alert">{error}</p>}
       {message && <p className="feedback" role="status">{message}</p>}
       <section className="metrics" aria-label="Resumen de incidencias"><article className="metric"><span>Total guardadas</span><strong>{list.summary.total}</strong></article><article className="metric"><span>Abiertas</span><strong>{list.summary.open}</strong></article><article className="metric"><span>Prioridad alta · abiertas</span><strong>{list.summary.high}</strong></article></section>
+      <ZaintzaImport demo={client.demo} disabled={saving || !context} onPrepare={source => { setImportSource(source); setForm(exchangeDraft(source)); intent.current = requestId(); setError(''); setMessage('Prueba revisada. Comprueba el título y la descripción y pulsa Crear incidencia.'); }} />
       <div className="workspace">
         <section className="panel" aria-labelledby="create-title"><div className="panel-heading"><h2 id="create-title">Nueva incidencia</h2><p>La creación es manual. Una desconexión por sí sola no abre una incidencia.</p></div>
+          {importSource && <div className="notice"><strong>Origen: Zaintza SOC · prueba ficticia</strong><p>{importSource.detection.id}. Sin aparato asociado; no se vincula automáticamente con el inventario.</p><button type="button" disabled={saving} onClick={() => { setImportSource(null); setForm(emptyForm); intent.current = requestId(); }}>Volver al alta manual</button></div>}
           <form className="ticket-form" onSubmit={create}>
-            <label>Aparato asociado<select name="deviceId" value={form.deviceId} onChange={changeForm} disabled={!context || saving}><option value="">Sin aparato asociado</option>{context?.devices.map(device => <option key={device.id} value={device.id}>{device.name}</option>)}</select></label>
+            <label>Aparato asociado<select name="deviceId" value={form.deviceId} onChange={changeForm} disabled={!context || saving || !!importSource}><option value="">Sin aparato asociado</option>{context?.devices.map(device => <option key={device.id} value={device.id}>{device.name}</option>)}</select></label>
             <label>Título<input name="title" value={form.title} onChange={changeForm} minLength={5} maxLength={120} required disabled={saving} /></label>
             <label>Descripción<textarea name="description" value={form.description} onChange={changeForm} minLength={10} maxLength={4000} rows={5} required disabled={saving} placeholder="Qué ocurre, desde cuándo y qué has comprobado" /></label>
-            <div className="form-row"><label>Categoría<select name="category" value={form.category} onChange={changeForm} disabled={saving}>{CATEGORIES.map(value => <option key={value}>{value}</option>)}</select></label><label>Prioridad<select name="priority" value={form.priority} onChange={changeForm} disabled={saving}>{Object.entries(PRIORITY).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
+            <div className="form-row"><label>Categoría<select name="category" value={form.category} onChange={changeForm} disabled={saving || !!importSource}>{CATEGORIES.map(value => <option key={value}>{value}</option>)}</select></label><label>Prioridad<select name="priority" value={form.priority} onChange={changeForm} disabled={saving}>{Object.entries(PRIORITY).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
             <button className="primary-button" disabled={!context || saving}>Crear incidencia</button>
           </form>
         </section>
@@ -135,6 +142,7 @@ export default function IncidentDesk({ client, initialDevice = '' }) {
           <label>Nota de seguimiento<textarea name="note" value={update.note} onChange={changeUpdate} maxLength={2000} rows={4} disabled={saving} placeholder="Pruebas realizadas, resultado o motivo de reapertura" /></label>
           <label>Resolución<textarea name="resolution" value={update.resolution} onChange={changeUpdate} maxLength={4000} minLength={update.status === 'resolved' ? 10 : undefined} required={update.status === 'resolved'} rows={4} disabled={saving} placeholder="Obligatoria para marcar como resuelta" /></label>
           <p className="desk-muted">Para cerrar, documenta una solución. Para reabrir una incidencia resuelta, añade el motivo en una nota de al menos 10 caracteres.</p><button className="primary-button" disabled={saving}>Guardar seguimiento</button></form></div>
+          {current.context.source && <section className="notice" aria-label="Origen de la incidencia"><strong>Zaintza SOC · prueba ficticia importada</strong><p>{current.context.source.detection.id} · {current.context.source.detection.eventCount} eventos. Este archivo no acredita una detección real ni modifica su investigación.</p><details><summary>Referencias de la prueba</summary><ul>{current.context.source.detection.evidenceRefs.map(ref => <li key={ref}>{ref}</li>)}</ul></details></section>}
           <h3>Historial de seguimiento</h3><ol className="desk-activity">{current.activity.map(item => <li key={item.id}><div><strong>{ACTIVITY[item.type] || item.type}</strong><time dateTime={item.date}>{when(item.date)}</time></div><p>{['status', 'reopened'].includes(item.type) ? item.detail.split(' → ').map(value => STATUS[value] || value).join(' → ') : item.type === 'priority' ? item.detail.split(' → ').map(value => PRIORITY[value] || value).join(' → ') : item.detail}</p><small>Registrado por: {item.actor}</small></li>)}</ol>
         </> : <p className="empty">{selectedId ? 'Cargando el detalle…' : 'Selecciona una incidencia de la bandeja.'}</p>}
       </section>
