@@ -62,7 +62,9 @@ describe('intercambio revisable de Zaintza', () => {
     await screen.findByText('INC-000002 · versión 2');
     await prepare();
     await user.click(screen.getByRole('button', { name: 'Crear incidencia' }));
-    await screen.findByText(/La prueba ya está registrada en INC-000002/);
+    const creation = screen.getByRole('form', { name: 'Crear incidencia' });
+    await within(creation).findByText(/La prueba ya está registrada en INC-000002/);
+    expect(within(creation).getByRole('link', { name: 'Ver detalle de INC-000002' })).toHaveAttribute('href', '#ticket-detail');
     const stored = await client.detail('INC-000002');
     expect(stored.status).toBe('resolved'); expect(stored.version).toBe(2);
     expect(stored.context.source).toEqual(validateExchange(fixture));

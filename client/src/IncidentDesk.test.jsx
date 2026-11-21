@@ -56,6 +56,18 @@ describe('integración de Laguntza IT', () => {
     expect(screen.getByText('Reapertura', { selector: 'strong' })).toBeInTheDocument();
   });
 
+  it('confirma junto al botón una nota guardada y la conserva en el historial', async () => {
+    const user = userEvent.setup();
+    render(<IncidentDesk client={createDemoIncidentApi()} />);
+    const note = await screen.findByRole('textbox', { name: 'Nota de seguimiento' });
+    await user.type(note, 'He revisado la prueba y he añadido esta nota.');
+    await user.click(screen.getByRole('button', { name: 'Guardar seguimiento' }));
+    const followup = screen.getByRole('form', { name: 'Guardar seguimiento' });
+    await within(followup).findByText('Seguimiento de INC-000001 guardado.');
+    expect(note).toHaveValue('');
+    expect(screen.getByText('He revisado la prueba y he añadido esta nota.')).toBeInTheDocument();
+  });
+
   it('conserva la nota escrita si el servidor rechaza una versión antigua', async () => {
     const user = userEvent.setup();
     const client = createDemoIncidentApi();
